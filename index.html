@@ -620,6 +620,36 @@
       <div class="card-title">Vos enfants au collège</div>
       <div class="card-subtitle">Ces informations nous permettent de pré-remplir les quantités conseillées pour chaque classe.</div>
 
+      <!-- COORDONNÉES PARENT -->
+      <div class="form-group">
+        <label class="form-label" style="margin-bottom:16px;">
+          <span>👤</span>
+          Vos coordonnées
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:480px;">
+          <div>
+            <label style="font-size:0.85rem;font-weight:700;color:var(--fcpe-blue);display:block;margin-bottom:6px;">Nom *</label>
+            <input type="text" id="parent-nom" placeholder="Dupont" required
+              style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-family:'Lato',sans-serif;font-size:0.95rem;">
+          </div>
+          <div>
+            <label style="font-size:0.85rem;font-weight:700;color:var(--fcpe-blue);display:block;margin-bottom:6px;">Prénom *</label>
+            <input type="text" id="parent-prenom" placeholder="Marie" required
+              style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-family:'Lato',sans-serif;font-size:0.95rem;">
+          </div>
+          <div>
+            <label style="font-size:0.85rem;font-weight:700;color:var(--fcpe-blue);display:block;margin-bottom:6px;">Email *</label>
+            <input type="email" id="parent-email" placeholder="marie.dupont@email.com" required
+              style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-family:'Lato',sans-serif;font-size:0.95rem;">
+          </div>
+          <div>
+            <label style="font-size:0.85rem;font-weight:700;color:var(--fcpe-blue);display:block;margin-bottom:6px;">Téléphone *</label>
+            <input type="tel" id="parent-tel" placeholder="06 12 34 56 78" required
+              style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-family:'Lato',sans-serif;font-size:0.95rem;">
+          </div>
+        </div>
+      </div>
+
       <!-- Q1 -->
       <div class="form-group">
         <label class="form-label">
@@ -691,7 +721,7 @@
 
     <div class="bottom-actions">
       <button class="btn btn-secondary" onclick="goToScreen(2)">← Retour</button>
-      <button class="btn btn-success btn-large" onclick="goToScreen(4)">
+      <button class="btn btn-success btn-large" onclick="submitOrder()">
         💳 Procéder au paiement →
       </button>
     </div>
@@ -1026,7 +1056,14 @@ function buildPaymentSummary() {
   classes.forEach(c => { classMap[c] = (classMap[c]||0)+1; });
   const uniqueClasses = [...new Set(classes)];
 
+  const rNom = document.getElementById('parent-nom') ? document.getElementById('parent-nom').value : '';
+  const rPrenom = document.getElementById('parent-prenom') ? document.getElementById('parent-prenom').value : '';
+  const rEmail = document.getElementById('parent-email') ? document.getElementById('parent-email').value : '';
+  const rTel = document.getElementById('parent-tel') ? document.getElementById('parent-tel').value : '';
   html += `<div style="margin-bottom:10px;font-size:0.9rem;">
+    <strong>Parent :</strong> ${rPrenom} ${rNom}<br>
+    <strong>Email :</strong> ${rEmail}<br>
+    <strong>Téléphone :</strong> ${rTel}<br>
     <strong>Enfant(s) :</strong> ${state.nbChildren}<br>
     <strong>Classe(s) :</strong> ${classes.map(c=>c.replace('e','ème')).join(', ')}
   </div>`;
@@ -1037,6 +1074,79 @@ function buildPaymentSummary() {
   </div>`;
 
   document.getElementById('payment-summary').innerHTML = html;
+}
+
+// =====================
+// ENVOI FORMSPREE
+// =====================
+function submitOrder() {
+  // Construire le résumé de commande
+  const classes = state.classes;
+  const classMap = {};
+  classes.forEach(c => { classMap[c] = (classMap[c]||0)+1; });
+  const uniqueClasses = [...new Set(classes)];
+
+  let orderLines = [];
+  let grandTotal = 0;
+
+  // Parcourir tous les items visibles
+  let itemIdx = 0;
+  ITEMS.forEach(item => {
+    if (!item.textInfo && item.price) {
+      uniqueClasses.forEach((cls, ci) => {
+        const sel = document.getElementById(`item-${itemIdx}-qty-${ci}`);
+        if (sel && parseInt(sel.value) > 0) {
+          const qty = parseInt(sel.value);
+          const total = (qty * item.price).toFixed(2);
+          orderLines.push(`${item.name.replace(/<[^>]*>/g,'')} | Classe: ${cls} | Qté: ${qty} | Prix: ${total}€`);
+          grandTotal += qty * item.price;
+        }
+      });
+      itemIdx++;
+    } else {
+      itemIdx++;
+    }
+  });
+
+  const totalText = grandTotal.toFixed(2).replace('.', ',') + ' €';
+
+  // Construire les données du formulaire
+  const formData = new FormData();
+  const parentNom = document.getElementById('parent-nom').value.trim();
+  const parentPrenom = document.getElementById('parent-prenom').value.trim();
+  const parentEmail = document.getElementById('parent-email').value.trim();
+  const parentTel = document.getElementById('parent-tel').value.trim();
+  formData.append('Nom', parentNom);
+  formData.append('Prenom', parentPrenom);
+  formData.append('Email', parentEmail);
+  formData.append('Telephone', parentTel);
+  formData.append('Nombre_enfants', state.nbChildren);
+  formData.append('Classes', classes.map(c=>c.replace('e','ème')).join(', '));
+  formData.append('Total', totalText);
+  formData.append('Commande_detail', orderLines.join('\n'));
+
+  // Afficher un message de chargement
+  const btn = event.target;
+  btn.textContent = '⏳ Envoi en cours...';
+  btn.disabled = true;
+
+  fetch('https://formspree.io/f/mzdqplvj', {
+    method: 'POST',
+    body: formData,
+    headers: { 'Accept': 'application/json' }
+  })
+  .then(response => {
+    if (response.ok) {
+      goToScreen(4);
+    } else {
+      // En cas d'erreur Formspree, on passe quand même à l'écran 4
+      goToScreen(4);
+    }
+  })
+  .catch(() => {
+    // En cas d'erreur réseau, on passe quand même à l'écran 4
+    goToScreen(4);
+  });
 }
 </script>
 </body>
