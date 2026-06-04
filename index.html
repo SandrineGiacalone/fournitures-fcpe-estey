@@ -743,14 +743,29 @@
         <div id="payment-summary"></div>
       </div>
 
+      <!-- TOTAL BIEN VISIBLE -->
+      <div style="background:#fff3cd;border:3px solid #f5c400;border-radius:12px;padding:20px 24px;margin:0 0 16px;text-align:center;">
+        <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:1rem;color:#856404;margin-bottom:8px;">
+          ⚠️ MONTANT À NOTER AVANT DE PASSER AU PAIEMENT
+        </div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:3rem;color:#c8102e;line-height:1;" id="payment-total-big">0,00 €</div>
+        <div style="font-size:0.85rem;color:#856404;margin-top:8px;font-weight:600;">
+          👉 Vous devrez saisir <strong>ce montant exact</strong> sur HelloAsso lors du paiement.<br>
+          HelloAsso s'ouvrira dans un nouvel onglet — gardez cette page ouverte pour vous y référer.
+        </div>
+      </div>
+
       <div class="total-block" style="margin:0 0 24px;">
-        <div class="total-label">Total à payer</div>
+        <div class="total-label">💶 Total de votre commande</div>
         <div class="total-amount" id="payment-total">0,00 €</div>
       </div>
 
       <a href="https://www.helloasso.com/associations/conseil-local-fcpe-college-de-l-estey/adhesions/adhesion-fcpe-2026-2027-college-de-l-estey" target="_blank" class="btn btn-success btn-large" style="width:100%;justify-content:center;font-size:1.1rem;">
-        💳 Payer sur HelloAsso
+        💳 Payer sur HelloAsso → (nouvel onglet)
       </a>
+      <p style="text-align:center;font-size:0.82rem;color:var(--text-light);margin-top:10px;">
+        ↗️ HelloAsso s'ouvre dans un nouvel onglet — cette page reste accessible pour voir votre total.
+      </p>
 
       <div class="btn-row" style="justify-content:center;margin-top:16px;">
         <button class="btn btn-secondary" onclick="goToScreen(3)">← Modifier ma commande</button>
@@ -1040,6 +1055,8 @@ function recalcTotal() {
   document.getElementById('grand-total').textContent = fmt;
   const pt = document.getElementById('payment-total');
   if(pt) pt.textContent = fmt;
+  const ptb = document.getElementById('payment-total-big');
+  if(ptb) ptb.textContent = fmt;
 }
 
 // =====================
@@ -1049,6 +1066,8 @@ function buildPaymentSummary() {
   recalcTotal();
   const totalText = document.getElementById('grand-total').textContent;
   document.getElementById('payment-total').textContent = totalText;
+  const bigTotal = document.getElementById('payment-total-big');
+  if(bigTotal) bigTotal.textContent = totalText;
 
   let html = '';
   const classes = state.classes;
